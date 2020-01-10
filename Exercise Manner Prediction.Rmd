@@ -1,0 +1,26 @@
+---
+title: "Exercise Manner Prediction"
+author: "Dion Fragkoulis"
+date: "10/01/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Download and store datasets
+
+```{r}
+if (!file.exists("pml-training.csv")){
+  download.file("https://d396qusza40orc.loudfront.net/predmachlearn/pml-training.csv", "pml-training.csv")
+}
+if (!file.exists("pml-testing.csv")){
+  download.file("https://d396qusza40orc.loudfront.net/predmachlearn/pml-testing.csv", "pml-testing.csv")
+}
+
+trainingSet <- read.csv("pml-training.csv")
+testingSet <- read.csv("pml-testing.csv")
+
+plot(cars)
+```
