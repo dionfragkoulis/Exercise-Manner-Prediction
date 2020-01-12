@@ -54,7 +54,7 @@ finalTestingSet <- newTestingSet[,-whichNotNeeded]
 ```
 
 we are drawing the correlation matrix between the 52 variables:
-```{r fig.height=10}
+```{r fig.height=8}
 corMatrix <- cor(finalTrainingSet[,-dim(finalTrainingSet)[2]])
 corrplot(corMatrix, type = "lower", method = "color", tl.cex = 0.7)
 ```
