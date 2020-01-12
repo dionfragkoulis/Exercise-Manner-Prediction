@@ -7,6 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(corrplot)
 ```
 
 ## Download and store datasets
@@ -22,5 +24,37 @@ if (!file.exists("pml-testing.csv")){
 trainingSet <- read.csv("pml-training.csv")
 testingSet <- read.csv("pml-testing.csv")
 
-plot(cars)
+```
+
+## Exploratory Analysis
+
+Check quality of data
+
+Identify columns with large amount of NA values (>50%):
+```{r}
+whichNA <- which(sapply(trainingSet, function(x) {round(sum(is.na(x)/dim(trainingSet)[1]),2)}) > .5)
+```
+
+Identify columns with large amount of blank values (>50%):
+```{r}
+whichBlank <- which(sapply(trainingSet, function(x) {round(sum((x=="")/dim(trainingSet)[1]),2)}) > .5)
+```
+
+Create new training and testing sets withoug these columns (NA values > 50% or blank values > 50%)
+```{r}
+newTrainingSet <- trainingSet[,-c(whichBlank, whichNA)]
+newTestingSet <- testingSet[,-c(whichBlank, whichNA)]
+```
+
+The columns that are related to id, name of individual, date/time etc., are not necessary, thefore we exclude from training and data sets:
+```{r}
+whichNotNeeded <- which(names(newTrainingSet) %in% c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", "cvtd_timestamp", "new_window", "num_window" ))
+finalTrainingSet <- newTrainingSet[,-whichNotNeeded]
+finalTestingSet <- newTestingSet[,-whichNotNeeded]
+```
+
+we are drawing the correlation matrix between the 52 variables:
+```{r fig.height=10}
+corMatrix <- cor(finalTrainingSet[,-dim(finalTrainingSet)[2]])
+corrplot(corMatrix, type = "lower", method = "color", tl.cex = 0.7)
 ```
