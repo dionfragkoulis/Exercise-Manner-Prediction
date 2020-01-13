@@ -1,5 +1,5 @@
 ---
-title: "Exercise Manner Prediction"
+title: "**Exercise Manner Prediction**"
 author: "Dion Fragkoulis"
 date: "10/01/2020"
 output: html_document
@@ -9,9 +9,15 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(caret)
 library(corrplot)
+library(rattle)
 ```
 
-## Download and store datasets
+# **1. Executive Summary**
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+The goal of our project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. We are going to use all of the other variables to predict with. We are going to examine various prediction models in order to determine which is one is the best and then we will use the best one to predict 20 different test cases.
+
+# **2. Download and store data**
 
 ```{r}
 if (!file.exists("pml-training.csv")){
@@ -23,12 +29,9 @@ if (!file.exists("pml-testing.csv")){
 
 trainingSet <- read.csv("pml-training.csv")
 testingSet <- read.csv("pml-testing.csv")
-
 ```
 
-## Exploratory Analysis
-
-Check quality of data
+# **3. Exploratory Analysis / Data Cleansing**
 
 Identify columns with large amount of NA values (>50%):
 ```{r}
@@ -40,7 +43,7 @@ Identify columns with large amount of blank values (>50%):
 whichBlank <- which(sapply(trainingSet, function(x) {round(sum((x=="")/dim(trainingSet)[1]),2)}) > .5)
 ```
 
-Create new training and testing sets withoug these columns (NA values > 50% or blank values > 50%)
+Create new training and testing sets withoug these columns (NA values > 50% or blank values > 50%):
 ```{r}
 newTrainingSet <- trainingSet[,-c(whichBlank, whichNA)]
 newTestingSet <- testingSet[,-c(whichBlank, whichNA)]
@@ -53,8 +56,104 @@ finalTrainingSet <- newTrainingSet[,-whichNotNeeded]
 finalTestingSet <- newTestingSet[,-whichNotNeeded]
 ```
 
-we are drawing the correlation matrix between the 52 variables:
+
+# **4. Prediction Models Training and Selection**
+
+## **4.a. Overview**
+
+We are going to perform cross validation by using the following models in the training set (*finalTrainingSet*) and then select the best, which will then test on the test set (*finalTestingSet*):
+
+* *Decision Trees*
+* *Random Forest*
+
+In order to achieve this, we are going to split the training set into two subsets:
+
+* *trainingSubset*
+* *validationSubset*
+
+We will then train our models in the **trainingSubset** and test them in the **validationSubset**.
+
+```{r}
+indexTrain <- createDataPartition(finalTrainingSet$classe, p=.7, list = F)
+trainingSubset <- finalTrainingSet[indexTrain,]
+validationSubset <- finalTrainingSet[-indexTrain,]
+```
+
+
+## **4.b. Decision Trees**
+
+We will start with **Decision Trees**:
+
+```{r, cache = TRUE}
+decisionTreesModel <- train(classe ~., method = "rpart", data = trainingSubset)
+decisionTreesModel$finalModel
+```
+
+We are goint to use the model to the validation set. in order to determine it's accuracy:
+
+```{r, cache = TRUE}
+predictedDecisionTrees <- predict(decisionTreesModel, newdata = validationSubset)
+confusionMatrixDecisionTrees <- confusionMatrix(predictedDecisionTrees, validationSubset$classe)
+confusionMatrixDecisionTrees
+```
+
+The accuracy of the **Decision Trees** model is **`r round(confusionMatrixDecisionTrees$overall[1]*100,2)`**, which is very low.
+
+
+## **4.c. Random Forest**
+
+The second model we are going to explore is **Random Forest**:
+```{r, cache = TRUE}
+randomForestModel <- train(classe ~., method = "rf", data = trainingSubset, ntree = 100)
+randomForestModel$finalModel
+```
+
+We see that the out-of-sample error estimate (OOB estimate) is **`r round(randomForestModel$finalModel[[4]][100,1]*100,2)`**.
+
+We are going to perform k-fold corss-validation (k=10) in order to see if the error is going to be reduced:
+
+```{r, cache = TRUE}
+cv <- trainControl(method="cv", 10)
+randomForestModelCV <- train(classe ~., method = "rf", data = trainingSubset, ntree = 100, trControl = cv)
+randomForestModelCV$finalModel
+```
+
+We see that after performing k-fold cross validation (k=10), we have a slightly better OOB estimate, **`r round(randomForestModelCV$finalModel[[4]][100,1]*100,2)`**.
+
+We are going to use the model to the validation set. in order to determine it's accuracy:
+
+```{r, cache = TRUE}
+predictedRandomForest <- predict(randomForestModelCV, newdata = validationSubset)
+confusionMatrixRandomForest <-confusionMatrix(predictedRandomForest, validationSubset$classe)
+confusionMatrixRandomForest 
+```
+
+The accuracy of the **Random Forest** model is **`r round(confusionMatrixRandomForest$overall[1]*100,2)`**, which is a very significant improvement from the Decision Trees model.
+
+
+# **5. Selected Model Test**
+Since we identified that Random Forest model is the best, we are going to apply this model in the testing set (finalTestingSet) in order to do our predictions:
+
+```{r}
+finalPrediction <- predict(randomForestModelCV, newdata = finalTestingSet)
+finalPrediction
+```
+
+# **6. Appendix**
+
+### a. Variables Correlation Matrix
+Correlation matrix between the all 52 variables of the final data set:
 ```{r fig.height=8}
 corMatrix <- cor(finalTrainingSet[,-dim(finalTrainingSet)[2]])
 corrplot(corMatrix, type = "lower", method = "color", tl.cex = 0.7)
+```
+
+### b. Decision Tree Diagram
+```{r}
+fancyRpartPlot(decisionTreesModel$finalModel)
+```
+
+### c. Random Forest Model Error Diagram
+```{r}
+plot(randomForestModelCV$finalModel, main = "Model error by number of trees")
 ```
