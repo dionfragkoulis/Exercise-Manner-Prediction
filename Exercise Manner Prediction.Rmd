@@ -94,10 +94,11 @@ We are goint to use the model to the validation set. in order to determine it's 
 ```{r, cache = TRUE}
 predictedDecisionTrees <- predict(decisionTreesModel, newdata = validationSubset)
 confusionMatrixDecisionTrees <- confusionMatrix(predictedDecisionTrees, validationSubset$classe)
+decisionTreesAccuracy <- round(confusionMatrixDecisionTrees$overall[1]*100,2)
 confusionMatrixDecisionTrees
 ```
 
-The accuracy of the **Decision Trees** model is **`r round(confusionMatrixDecisionTrees$overall[1]*100,2)`**, which is very low.
+The Accuracy of the **Decision Trees** model is *`r decisionTreesAccuracy/100` = **`r decisionTreesAccuracy`%***, which is very low. Consequently, the **Out-Of-Sample Error** is *1 - Accuracy = 1- `r decisionTreesAccuracy/100` = `r 1-(decisionTreesAccuracy/100)` = **`r 100*(1-(decisionTreesAccuracy/100))`%***.
 
 
 ## **4.c. Random Forest**
@@ -108,7 +109,7 @@ randomForestModel <- train(classe ~., method = "rf", data = trainingSubset, ntre
 randomForestModel$finalModel
 ```
 
-We see that the out-of-sample error estimate (OOB estimate) is **`r round(randomForestModel$finalModel[[4]][100,1]*100,2)`**.
+We see that OOB estimate is **`r round(randomForestModel$finalModel[[4]][100,1]*100,2)`**.
 
 We are going to perform k-fold corss-validation (k=10) in order to see if the error is going to be reduced:
 
@@ -125,10 +126,11 @@ We are going to use the model to the validation set. in order to determine it's 
 ```{r, cache = TRUE}
 predictedRandomForest <- predict(randomForestModelCV, newdata = validationSubset)
 confusionMatrixRandomForest <-confusionMatrix(predictedRandomForest, validationSubset$classe)
+randomForestAccuracy <- round(confusionMatrixRandomForest$overall[1]*100,2)
 confusionMatrixRandomForest 
 ```
 
-The accuracy of the **Random Forest** model is **`r round(confusionMatrixRandomForest$overall[1]*100,2)`**, which is a very significant improvement from the Decision Trees model.
+The Accuracy of the **Random Forest** model is *`r randomForestAccuracy/100` = **`r randomForestAccuracy`%***, which is a very significant improvement from the Decision Trees model. Consequently, the **Out-Of-Sample Error** is *1 - Accuracy = 1- `r randomForestAccuracy/100` = `r 1-(randomForestAccuracy/100)` = **`r 100*(1-(randomForestAccuracy/100))`%***.
 
 
 # **5. Selected Model Test**
@@ -153,7 +155,13 @@ corrplot(corMatrix, type = "lower", method = "color", tl.cex = 0.7)
 fancyRpartPlot(decisionTreesModel$finalModel)
 ```
 
-### c. Random Forest Model Error Diagram
+### c. Random Forest Accuracty Diagram
+```{r}
+plot(randomForestModelCV, log = "y", lwd = 2, main = "Model accuracy by predictors", xlab = "# of Predictors", 
+    ylab = "Accuracy")
+```
+
+### d. Random Forest Model Error Diagram
 ```{r}
 plot(randomForestModelCV$finalModel, main = "Model error by number of trees")
 ```
